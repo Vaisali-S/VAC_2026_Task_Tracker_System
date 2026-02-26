@@ -1,3 +1,4 @@
+const authRoutes = require("./routes/authRoutes");
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -11,7 +12,9 @@ app.use(express.json());
 
 // Import routes
 const taskRoutes = require("./routes/taskRoutes");
+app.use("/api/users", require("./routes/userRoutes"));
 app.use("/api/tasks", taskRoutes);
+app.use("/api/auth", authRoutes);
 
 // Test route
 app.get("/", (req, res) => {
