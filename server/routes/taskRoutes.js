@@ -1,102 +1,58 @@
 const express = require("express");
 const router = express.Router();
 const Task = require("../models/Task");
+const { protect } = require("../middleware/authMiddleware");
 
-// GET all tasks
-router.get("/", async (req, res) => {
+// GET all tasks for logged-in user
+router.get("/", protect, async (req, res) => {
   try {
-    const tasks = await Task.find();
-    console.log("Fetched tasks:", tasks);
+    const tasks = await Task.find({ user: req.user._id }).sort({ createdAt: -1 });
     res.json(tasks);
-  } catch (error) {
-    console.error("Error fetching tasks:", error);
-    res.status(500).json({ message: "Error fetching tasks", error: error.message });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 
 // CREATE task
-router.post("/", async (req, res) => {
-  console.log("POST /api/tasks called with body:", req.body);
-
-  if (!req.body.title) {
-    console.warn("Title missing in request body");
-    return res.status(400).json({ message: "Title is required" });
-  }
+router.post("/", protect, async (req, res) => {
+  if (!req.body.title) return res.status(400).json({ message: "Title is required" });
 
   try {
-    const newTask = new Task({ title: req.body.title });
+    const newTask = new Task({ title: req.body.title, user: req.user._id });
     const savedTask = await newTask.save();
-    console.log("Task saved successfully:", savedTask);
     res.status(201).json(savedTask);
-  } catch (error) {
-    console.error("Error creating task:", error);
-    res.status(500).json({ message: "Error creating task", error: error.message });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 
-// UPDATE task (Edit title OR toggle completed)
-router.put("/:id", async (req, res) => {
-  console.log(`PUT /api/tasks/${req.params.id} called with body:`, req.body);
-
+// UPDATE task
+router.put("/:id", protect, async (req, res) => {
   const { title, completed } = req.body;
-
-  // Validation
-  if (title === undefined && completed === undefined) {
-    return res.status(400).json({
-      message: "Provide at least title or completed to update",
-    });
-  }
-
-  const updateFields = {};
-
-  if (title !== undefined) {
-    updateFields.title = title;
-  }
-
-  if (completed !== undefined) {
-    if (typeof completed !== "boolean") {
-      return res.status(400).json({
-        message: "Completed must be boolean",
-      });
-    }
-    updateFields.completed = completed;
-  }
-
   try {
-    const updatedTask = await Task.findByIdAndUpdate(
-      req.params.id,
-      updateFields,
-      { new: true }
-    );
+    const task = await Task.findOne({ _id: req.params.id, user: req.user._id });
+    if (!task) return res.status(404).json({ message: "Task not found" });
 
-    if (!updatedTask) {
-      return res.status(404).json({ message: "Task not found" });
-    }
+    if (title !== undefined) task.title = title;
+    if (completed !== undefined) task.completed = completed;
 
-    console.log("Task updated successfully:", updatedTask);
+    const updatedTask = await task.save();
     res.json(updatedTask);
-  } catch (error) {
-    console.error("Error updating task:", error);
-    res.status(500).json({
-      message: "Error updating task",
-      error: error.message,
-    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
-// DELETE task
-router.delete("/:id", async (req, res) => {
-  console.log(`DELETE /api/tasks/${req.params.id} called`);
 
+// DELETE task
+router.delete("/:id", protect, async (req, res) => {
   try {
-    const deletedTask = await Task.findByIdAndDelete(req.params.id);
-    if (!deletedTask) {
-      return res.status(404).json({ message: "Task not found" });
-    }
-    console.log("Task deleted successfully:", deletedTask);
-    res.json({ message: "Task deleted", task: deletedTask });
-  } catch (error) {
-    console.error("Error deleting task:", error);
-    res.status(500).json({ message: "Error deleting task", error: error.message });
+    const task = await Task.findOne({ _id: req.params.id, user: req.user._id });
+    if (!task) return res.status(404).json({ message: "Task not found" });
+
+    await task.deleteOne();
+    res.json({ message: "Task deleted" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 

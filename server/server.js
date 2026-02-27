@@ -9,16 +9,18 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Import routes
+// Routes
 const taskRoutes = require("./routes/taskRoutes");
-app.use("/api/tasks", taskRoutes);
+const userRoutes = require("./routes/userRoutes");
 
-// Test route
+app.use("/api/tasks", taskRoutes);
+app.use("/api/users", userRoutes);
+
 app.get("/", (req, res) => {
   res.send("Server is running");
 });
 
-// Connect to MongoDB
+// MongoDB connection
 mongoose
   .connect(process.env.MONGODB_URI)
   .then(() => console.log("MongoDB connected"))

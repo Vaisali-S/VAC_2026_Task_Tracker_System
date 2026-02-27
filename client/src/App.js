@@ -1,20 +1,26 @@
 import { useState, useEffect } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import axios from "axios";
 
-function App() {
+import Signup from "./pages/Signup";
+import Login from "./pages/Login";
+
+function TaskPage({ user, setUser }) {
   const [task, setTask] = useState("");
   const [tasks, setTasks] = useState([]);
   const [editId, setEditId] = useState(null);
   const [editText, setEditText] = useState("");
-
   const [filter, setFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
 
   const apiURL = "http://localhost:5000/api/tasks";
 
   useEffect(() => {
-    fetchTasks();
-  }, []);
+    if (user.token) {
+      axios.defaults.headers.common["Authorization"] = `Bearer ${user.token}`;
+      fetchTasks();
+    }
+  }, [user.token]);
 
   const fetchTasks = async () => {
     try {
@@ -27,7 +33,6 @@ function App() {
 
   const handleAdd = async () => {
     if (!task.trim()) return;
-
     try {
       await axios.post(apiURL, { title: task });
       setTask("");
@@ -48,9 +53,7 @@ function App() {
 
   const handleToggle = async (id, completed) => {
     try {
-      await axios.put(`${apiURL}/${id}`, {
-        completed: !completed,
-      });
+      await axios.put(`${apiURL}/${id}`, { completed: !completed });
       fetchTasks();
     } catch (err) {
       console.log(err.message);
@@ -59,11 +62,8 @@ function App() {
 
   const handleEditSave = async (id) => {
     if (!editText.trim()) return;
-
     try {
-      await axios.put(`${apiURL}/${id}`, {
-        title: editText,
-      });
+      await axios.put(`${apiURL}/${id}`, { title: editText });
       setEditId(null);
       setEditText("");
       fetchTasks();
@@ -72,23 +72,40 @@ function App() {
     }
   };
 
-  // 🔥 FILTER + SEARCH LOGIC
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("username");
+    setUser({ token: "", username: "" });
+  };
+
+  // Personalized greeting
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return `Good morning, ${user.username}`;
+    if (hour < 18) return `Good afternoon, ${user.username}`;
+    return `Good evening, ${user.username}`;
+  };
+
+  // Filtered + searched tasks
   const filteredTasks = tasks
-    .filter((t) => {
-      if (filter === "completed") return t.completed;
-      if (filter === "pending") return !t.completed;
-      return true;
-    })
-    .filter((t) =>
-      t.title.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    .filter((t) => (filter === "completed" ? t.completed : filter === "pending" ? !t.completed : true))
+    .filter((t) => t.title.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
     <div className="min-h-screen bg-gray-100 flex justify-center pt-10">
       <div className="bg-white p-6 rounded shadow-md w-full max-w-md">
-        <h1 className="text-2xl font-bold mb-4 text-center">
-          Task Manager
-        </h1>
+        {/* Greeting + Logout */}
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-xl font-semibold">{getGreeting()}</h1>
+          <button
+            onClick={handleLogout}
+            className="bg-red-500 text-white px-3 py-1 rounded"
+          >
+            Logout
+          </button>
+        </div>
+
+        <h1 className="text-2xl font-bold mb-4 text-center">Task Manager</h1>
 
         {/* Add Task */}
         <div className="flex gap-2 mb-4">
@@ -107,7 +124,7 @@ function App() {
           </button>
         </div>
 
-        {/* 🔎 Search */}
+        {/* Search */}
         <input
           type="text"
           placeholder="Search tasks..."
@@ -116,37 +133,23 @@ function App() {
           className="w-full border p-2 rounded mb-4"
         />
 
-        {/* 🎛 Filter Buttons */}
+        {/* Filter Buttons */}
         <div className="flex justify-between mb-4">
           <button
             onClick={() => setFilter("all")}
-            className={`px-3 py-1 rounded ${
-              filter === "all"
-                ? "bg-gray-800 text-white"
-                : "bg-gray-200"
-            }`}
+            className={`px-3 py-1 rounded ${filter === "all" ? "bg-gray-800 text-white" : "bg-gray-200"}`}
           >
             All
           </button>
-
           <button
             onClick={() => setFilter("completed")}
-            className={`px-3 py-1 rounded ${
-              filter === "completed"
-                ? "bg-green-600 text-white"
-                : "bg-gray-200"
-            }`}
+            className={`px-3 py-1 rounded ${filter === "completed" ? "bg-green-600 text-white" : "bg-gray-200"}`}
           >
             Completed
           </button>
-
           <button
             onClick={() => setFilter("pending")}
-            className={`px-3 py-1 rounded ${
-              filter === "pending"
-                ? "bg-yellow-500 text-white"
-                : "bg-gray-200"
-            }`}
+            className={`px-3 py-1 rounded ${filter === "pending" ? "bg-yellow-500 text-white" : "bg-gray-200"}`}
           >
             Pending
           </button>
@@ -163,28 +166,17 @@ function App() {
                 <input
                   type="checkbox"
                   checked={t.completed}
-                  onChange={() =>
-                    handleToggle(t._id, t.completed)
-                  }
+                  onChange={() => handleToggle(t._id, t.completed)}
                 />
-
                 {editId === t._id ? (
                   <input
                     type="text"
                     value={editText}
-                    onChange={(e) =>
-                      setEditText(e.target.value)
-                    }
+                    onChange={(e) => setEditText(e.target.value)}
                     className="border p-1 rounded flex-1"
                   />
                 ) : (
-                  <span
-                    className={`flex-1 ${
-                      t.completed
-                        ? "line-through text-gray-400"
-                        : ""
-                    }`}
-                  >
+                  <span className={`flex-1 ${t.completed ? "line-through text-gray-400" : ""}`}>
                     {t.title}
                   </span>
                 )}
@@ -192,12 +184,7 @@ function App() {
 
               <div className="flex gap-2">
                 {editId === t._id ? (
-                  <button
-                    onClick={() => handleEditSave(t._id)}
-                    className="text-green-600"
-                  >
-                    Save
-                  </button>
+                  <button onClick={() => handleEditSave(t._id)} className="text-green-600">Save</button>
                 ) : (
                   <button
                     onClick={() => {
@@ -209,25 +196,44 @@ function App() {
                     Edit
                   </button>
                 )}
-
-                <button
-                  onClick={() => handleDelete(t._id)}
-                  className="text-red-600"
-                >
-                  Delete
-                </button>
+                <button onClick={() => handleDelete(t._id)} className="text-red-600">Delete</button>
               </div>
             </li>
           ))}
         </ul>
 
         {filteredTasks.length === 0 && (
-          <p className="text-center text-gray-500 mt-4">
-            No tasks found
-          </p>
+          <p className="text-center text-gray-500 mt-4">No tasks found</p>
         )}
       </div>
     </div>
+  );
+}
+
+function App() {
+  const [user, setUser] = useState({
+    username: localStorage.getItem("username") || "",
+    token: localStorage.getItem("token") || "",
+  });
+
+  return (
+    <Router>
+      <Routes>
+        <Route
+          path="/login"
+          element={!user.token ? <Login setUser={setUser} /> : <Navigate to="/tasks" />}
+        />
+        <Route
+          path="/signup"
+          element={!user.token ? <Signup setUser={setUser} /> : <Navigate to="/tasks" />}
+        />
+        <Route
+          path="/tasks"
+          element={user.token ? <TaskPage user={user} setUser={setUser} /> : <Navigate to="/login" />}
+        />
+        <Route path="*" element={<Navigate to={user.token ? "/tasks" : "/login"} />} />
+      </Routes>
+    </Router>
   );
 }
 
