@@ -4,6 +4,7 @@ import axios from "axios";
 
 import Signup from "./pages/Signup";
 import Login from "./pages/Login";
+import "./styles/midnight-ai.css";
 
 function TaskPage({ user, setUser }) {
   const [task, setTask] = useState("");
@@ -78,7 +79,6 @@ function TaskPage({ user, setUser }) {
     setUser({ token: "", username: "" });
   };
 
-  // Personalized greeting
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return `Good morning, ${user.username}`;
@@ -86,26 +86,23 @@ function TaskPage({ user, setUser }) {
     return `Good evening, ${user.username}`;
   };
 
-  // Filtered + searched tasks
   const filteredTasks = tasks
     .filter((t) => (filter === "completed" ? t.completed : filter === "pending" ? !t.completed : true))
     .filter((t) => t.title.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
-    <div className="min-h-screen bg-gray-100 flex justify-center pt-10">
-      <div className="bg-white p-6 rounded shadow-md w-full max-w-md">
+    <div className="min-h-screen flex justify-center pt-10">
+      <div className="glass-card p-6 w-full max-w-md">
+
         {/* Greeting + Logout */}
         <div className="flex justify-between items-center mb-4">
-          <h1 className="text-xl font-semibold">{getGreeting()}</h1>
-          <button
-            onClick={handleLogout}
-            className="bg-red-500 text-white px-3 py-1 rounded"
-          >
+          <h1 className="text-xl font-semibold ai-title">{getGreeting()}</h1>
+          <button onClick={handleLogout} className="delete-text">
             Logout
           </button>
         </div>
 
-        <h1 className="text-2xl font-bold mb-4 text-center">Task Manager</h1>
+        <h1 className="text-2xl font-bold mb-4 text-center ai-title">Task Manager</h1>
 
         {/* Add Task */}
         <div className="flex gap-2 mb-4">
@@ -114,12 +111,9 @@ function TaskPage({ user, setUser }) {
             placeholder="Enter task..."
             value={task}
             onChange={(e) => setTask(e.target.value)}
-            className="flex-1 border p-2 rounded"
+            className="flex-1 ai-input"
           />
-          <button
-            onClick={handleAdd}
-            className="bg-blue-500 text-white px-4 rounded"
-          >
+          <button onClick={handleAdd} className="ai-btn">
             Add
           </button>
         </div>
@@ -130,50 +124,34 @@ function TaskPage({ user, setUser }) {
           placeholder="Search tasks..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full border p-2 rounded mb-4"
+          className="w-full ai-input mb-4"
         />
 
         {/* Filter Buttons */}
         <div className="flex justify-between mb-4">
-          <button
-            onClick={() => setFilter("all")}
-            className={`px-3 py-1 rounded ${filter === "all" ? "bg-gray-800 text-white" : "bg-gray-200"}`}
-          >
-            All
-          </button>
-          <button
-            onClick={() => setFilter("completed")}
-            className={`px-3 py-1 rounded ${filter === "completed" ? "bg-green-600 text-white" : "bg-gray-200"}`}
-          >
-            Completed
-          </button>
-          <button
-            onClick={() => setFilter("pending")}
-            className={`px-3 py-1 rounded ${filter === "pending" ? "bg-yellow-500 text-white" : "bg-gray-200"}`}
-          >
-            Pending
-          </button>
+          <button onClick={() => setFilter("all")} className={`ai-btn ${filter !== "all" ? "opacity-50" : ""}`}>All</button>
+          <button onClick={() => setFilter("completed")} className={`ai-btn ${filter !== "completed" ? "opacity-50" : ""}`}>Completed</button>
+          <button onClick={() => setFilter("pending")} className={`ai-btn ${filter !== "pending" ? "opacity-50" : ""}`}>Pending</button>
         </div>
 
         {/* Task List */}
         <ul>
           {filteredTasks.map((t) => (
-            <li
-              key={t._id}
-              className="flex justify-between items-center border-b py-2"
-            >
+            <li key={t._id} className="task-card flex justify-between items-center mb-2">
+
               <div className="flex items-center gap-2 flex-1">
                 <input
                   type="checkbox"
                   checked={t.completed}
                   onChange={() => handleToggle(t._id, t.completed)}
                 />
+
                 {editId === t._id ? (
                   <input
                     type="text"
                     value={editText}
                     onChange={(e) => setEditText(e.target.value)}
-                    className="border p-1 rounded flex-1"
+                    className="ai-input flex-1"
                   />
                 ) : (
                   <span className={`flex-1 ${t.completed ? "line-through text-gray-400" : ""}`}>
@@ -184,27 +162,29 @@ function TaskPage({ user, setUser }) {
 
               <div className="flex gap-2">
                 {editId === t._id ? (
-                  <button onClick={() => handleEditSave(t._id)} className="text-green-600">Save</button>
+                  <button onClick={() => handleEditSave(t._id)} className="ai-btn">Save</button>
                 ) : (
                   <button
                     onClick={() => {
                       setEditId(t._id);
                       setEditText(t.title);
                     }}
-                    className="text-blue-600"
+                    className="ai-btn"
                   >
                     Edit
                   </button>
                 )}
-                <button onClick={() => handleDelete(t._id)} className="text-red-600">Delete</button>
+                <button onClick={() => handleDelete(t._id)} className="delete-text">Delete</button>
               </div>
+
             </li>
           ))}
         </ul>
 
         {filteredTasks.length === 0 && (
-          <p className="text-center text-gray-500 mt-4">No tasks found</p>
+          <p className="text-center text-gray-400 mt-4">No tasks found</p>
         )}
+
       </div>
     </div>
   );

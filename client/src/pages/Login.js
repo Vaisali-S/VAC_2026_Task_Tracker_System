@@ -1,5 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
+import "../styles/midnight-ai.css";
 
 function Login({ setUser }) {
   const [formData, setFormData] = useState({ email: "", password: "" });
@@ -8,7 +9,7 @@ function Login({ setUser }) {
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-    setErrorMessage(""); // clear error on input
+    setErrorMessage("");
   };
 
   const handleSubmit = async (e) => {
@@ -18,79 +19,84 @@ function Login({ setUser }) {
     try {
       const res = await axios.post("http://localhost:5000/api/users/login", formData);
 
-      // Save token + username
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("username", res.data.username);
 
       setUser({ token: res.data.token, username: res.data.username });
     } catch (err) {
-      // Show centered popup
       setErrorMessage(err.response?.data?.message || "Login failed");
       setTimeout(() => setErrorMessage(""), 3000);
     }
   };
 
   return (
-    <div className="w-full max-w-md bg-white p-6 rounded shadow-md relative">
-      <h1 className="text-2xl font-bold mb-4 text-center">Login</h1>
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="glass-card w-full max-w-md p-6 relative">
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-        {/* Email */}
-        <div>
+        <h1 className="text-2xl font-bold mb-4 text-center ai-title">
+          Login
+        </h1>
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+
+          {/* Email */}
           <input
             type="email"
             name="email"
             placeholder="Email"
             value={formData.email}
             onChange={handleChange}
-            className="w-full border p-2 rounded"
+            className="ai-input"
           />
-        </div>
 
-        {/* Password */}
-        <div className="relative">
-          <input
-            type={showPassword ? "text" : "password"}
-            name="password"
-            placeholder="Password"
-            value={formData.password}
-            onChange={handleChange}
-            className="w-full border p-2 rounded"
-          />
+          {/* Password */}
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              name="password"
+              placeholder="Password"
+              value={formData.password}
+              onChange={handleChange}
+              className="ai-input w-full"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-2 text-blue-300 hover:text-blue-100 transition"
+            >
+              {showPassword ? "Hide" : "Show"}
+            </button>
+          </div>
+
           <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-2 top-2 text-gray-600"
+            type="submit"
+            className="ai-btn mt-2"
           >
-            {showPassword ? "Hide" : "Show"}
+            Login
           </button>
+        </form>
+
+        {/* Links */}
+        <div className="flex justify-between mt-3 text-sm">
+          <span className="ai-link">
+            Forgot Password?
+          </span>
+          <span
+            className="ai-link"
+            onClick={() => (window.location.href = "/signup")}
+          >
+            Don't have an account? Sign up
+          </span>
         </div>
 
-        <button
-          type="submit"
-          className="bg-blue-500 text-white px-4 py-2 rounded mt-2"
-        >
-          Login
-        </button>
-      </form>
+        {/* Error Popup */}
+        {errorMessage && (
+          <div className="popup-error">
+            <p>{errorMessage}</p>
+          </div>
+        )}
 
-      {/* Links */}
-      <div className="flex justify-between mt-2 text-sm">
-        <span className="text-blue-500 cursor-pointer">Forgot Password?</span>
-        <span
-          className="text-blue-500 cursor-pointer"
-          onClick={() => (window.location.href = "/signup")}
-        >
-          Don't have an account? Sign up
-        </span>
       </div>
-
-      {/* Centered error popup */}
-      {errorMessage && (
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white border p-4 shadow-lg w-52 text-center z-10">
-          <p className="text-red-500">{errorMessage}</p>
-        </div>
-      )}
     </div>
   );
 }
