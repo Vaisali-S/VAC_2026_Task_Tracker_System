@@ -34,31 +34,55 @@ router.post("/", async (req, res) => {
   }
 });
 
-// UPDATE task
+// UPDATE task (Edit title OR toggle completed)
 router.put("/:id", async (req, res) => {
   console.log(`PUT /api/tasks/${req.params.id} called with body:`, req.body);
-  if (typeof req.body.completed !== "boolean") {
-    console.warn("Completed status missing or invalid");
-    return res.status(400).json({ message: "Completed status must be boolean" });
+
+  const { title, completed } = req.body;
+
+  // Validation
+  if (title === undefined && completed === undefined) {
+    return res.status(400).json({
+      message: "Provide at least title or completed to update",
+    });
+  }
+
+  const updateFields = {};
+
+  if (title !== undefined) {
+    updateFields.title = title;
+  }
+
+  if (completed !== undefined) {
+    if (typeof completed !== "boolean") {
+      return res.status(400).json({
+        message: "Completed must be boolean",
+      });
+    }
+    updateFields.completed = completed;
   }
 
   try {
     const updatedTask = await Task.findByIdAndUpdate(
       req.params.id,
-      { completed: req.body.completed },
+      updateFields,
       { new: true }
     );
+
     if (!updatedTask) {
       return res.status(404).json({ message: "Task not found" });
     }
+
     console.log("Task updated successfully:", updatedTask);
     res.json(updatedTask);
   } catch (error) {
     console.error("Error updating task:", error);
-    res.status(500).json({ message: "Error updating task", error: error.message });
+    res.status(500).json({
+      message: "Error updating task",
+      error: error.message,
+    });
   }
 });
-
 // DELETE task
 router.delete("/:id", async (req, res) => {
   console.log(`DELETE /api/tasks/${req.params.id} called`);
