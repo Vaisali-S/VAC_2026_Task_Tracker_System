@@ -14,29 +14,32 @@ function Signup({ setUser }) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
+  const [otpSent, setOtpSent] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [verified, setVerified] = useState(false);
+
+  const [alert, setAlert] = useState({ message: "", type: "" });
+
   const validate = () => {
     const errs = {};
 
     if (!formData.name.trim()) errs.name = "Name is required";
     else if (!/^[A-Za-z .]+$/.test(formData.name))
-      errs.name = "Name can contain only letters, spaces, and dots";
+      errs.name = "Only letters, spaces & dots allowed";
 
     if (!formData.email) errs.email = "Email is required";
     else if (!/^\S+@\S+\.\S+$/.test(formData.email))
-      errs.email = "Invalid email format";
+      errs.email = "Invalid email";
 
-    if (!formData.password) errs.password = "Password is required";
+    if (!formData.password) errs.password = "Password required";
     else if (
       !/^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{6,}$/.test(
         formData.password
       )
     )
-      errs.password =
-        "Password must be at least 6 chars, 1 uppercase, 1 digit, 1 special char";
+      errs.password = "6+ chars, 1 uppercase, 1 number, 1 symbol";
 
-    if (!formData.confirmPassword)
-      errs.confirmPassword = "Confirm password is required";
-    else if (formData.confirmPassword !== formData.password)
+    if (formData.confirmPassword !== formData.password)
       errs.confirmPassword = "Passwords do not match";
 
     setErrors(errs);
@@ -48,9 +51,58 @@ function Signup({ setUser }) {
     setErrors({ ...errors, [e.target.name]: "" });
   };
 
+  // Function to show alert on top
+  const showAlert = (msg, type) => {
+    setAlert({ message: msg, type });
+    setTimeout(() => setAlert({ message: "", type: "" }), 2000);
+  };
+
+  // 📩 Send OTP
+  const handleSendOtp = async () => {
+    if (!formData.email) {
+      showAlert("Enter email first", "error");
+      return;
+    }
+
+    try {
+      await axios.post("http://localhost:5000/api/users/send-otp", {
+        email: formData.email,
+      });
+      setOtpSent(true);
+      showAlert("OTP sent ✉️", "success");
+    } catch {
+      showAlert("OTP send failed", "error");
+    }
+  };
+
+  // 🔐 Verify OTP
+  const handleVerifyOtp = async () => {
+    if (!otp) {
+      showAlert("Enter OTP", "error");
+      return;
+    }
+
+    try {
+      await axios.post("http://localhost:5000/api/users/verify-otp", {
+        email: formData.email,
+        otp,
+      });
+      setVerified(true);
+      showAlert("OTP verified ✅", "success");
+    } catch {
+      showAlert("Invalid OTP", "error");
+    }
+  };
+
+  // 🚀 Signup
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
+
+    if (!verified) {
+      showAlert("Verify OTP first", "error");
+      return;
+    }
 
     try {
       const res = await axios.post("http://localhost:5000/api/users/signup", {
@@ -64,12 +116,24 @@ function Signup({ setUser }) {
 
       setUser({ token: res.data.token, username: res.data.username });
     } catch (err) {
-      alert(err.response?.data?.message || "Signup failed");
+      showAlert(err.response?.data?.message || "Signup failed", "error");
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
+    <div className="min-h-screen flex items-center justify-center relative">
+      
+      {/* ALERT */}
+      {alert.message && (
+        <div
+          className={`absolute top-5 w-full max-w-md px-4 py-2 rounded text-center font-medium ${
+            alert.type === "success" ? "bg-green-500 text-white" : "bg-red-500 text-white"
+          }`}
+        >
+          {alert.message}
+        </div>
+      )}
+
       <div className="glass-card w-full max-w-md p-6">
 
         <h1 className="text-2xl font-bold mb-4 text-center ai-title">
@@ -78,30 +142,42 @@ function Signup({ setUser }) {
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
 
-          {/* Name */}
-          <div>
+          <input
+            type="text"
+            name="name"
+            placeholder="Name"
+            value={formData.name}
+            onChange={handleChange}
+            className="ai-input"
+          />
+          {errors.name && <p className="ai-error">{errors.name}</p>}
+
+          <input
+            type="email"
+            name="email"
+            placeholder="Email"
+            value={formData.email}
+            onChange={handleChange}
+            className="ai-input"
+          />
+          {errors.email && <p className="ai-error">{errors.email}</p>}
+
+          {/* OTP */}
+          <div className="relative">
             <input
               type="text"
-              name="name"
-              placeholder="Name"
-              value={formData.name}
-              onChange={handleChange}
-              className="ai-input"
+              placeholder="Enter OTP"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value)}
+              className="ai-input w-full"
             />
-            {errors.name && <p className="ai-error">{errors.name}</p>}
-          </div>
-
-          {/* Email */}
-          <div>
-            <input
-              type="email"
-              name="email"
-              placeholder="Email"
-              value={formData.email}
-              onChange={handleChange}
-              className="ai-input"
-            />
-            {errors.email && <p className="ai-error">{errors.email}</p>}
+            <button
+              type="button"
+              onClick={otpSent ? handleVerifyOtp : handleSendOtp}
+              className="absolute right-3 top-2 text-blue-300 hover:text-blue-100 transition"
+            >
+              {otpSent ? "Verify" : "Send OTP"}
+            </button>
           </div>
 
           {/* Password */}
@@ -117,14 +193,14 @@ function Signup({ setUser }) {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-2 text-blue-300 hover:text-blue-100 transition"
+              className="absolute right-3 top-2 text-blue-300 hover:text-blue-100"
             >
               {showPassword ? "Hide" : "Show"}
             </button>
-            {errors.password && <p className="ai-error">{errors.password}</p>}
           </div>
+          {errors.password && <p className="ai-error">{errors.password}</p>}
 
-          {/* Confirm Password */}
+          {/* Confirm */}
           <div className="relative">
             <input
               type={showConfirm ? "text" : "password"}
@@ -137,19 +213,16 @@ function Signup({ setUser }) {
             <button
               type="button"
               onClick={() => setShowConfirm(!showConfirm)}
-              className="absolute right-3 top-2 text-blue-300 hover:text-blue-100 transition"
+              className="absolute right-3 top-2 text-blue-300 hover:text-blue-100"
             >
               {showConfirm ? "Hide" : "Show"}
             </button>
-            {errors.confirmPassword && (
-              <p className="ai-error">{errors.confirmPassword}</p>
-            )}
           </div>
+          {errors.confirmPassword && (
+            <p className="ai-error">{errors.confirmPassword}</p>
+          )}
 
-          <button
-            type="submit"
-            className="ai-btn mt-2"
-          >
+          <button type="submit" className="ai-btn mt-2">
             Sign Up
           </button>
         </form>
